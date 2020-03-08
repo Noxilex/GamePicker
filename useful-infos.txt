@@ -1,0 +1,4 @@
+Get User id: http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=9A1017328003E922265CEB50D57A86FF&vanityurl=userVanityUrlName
+Get Owned games: http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=9A1017328003E922265CEB50D57A86FF&steamid=76561197960434622&format=json
+Get infos about game: http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=9A1017328003E922265CEB50D57A86FF&appid=397900
+Steam API Key: 9A1017328003E922265CEB50D57A86FF
