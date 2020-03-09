@@ -1,8 +1,5 @@
 <template>
-  <div class="d-flex flex-column">
-    <h1 class="flex-initial">
-      Games you have in common
-    </h1>
+  <div>
     <b-list-group v-if="gamelist" id="results" flush>
       <b-list-group-item v-for="(item, index) in gamelist" :key="index">
         <img v-if="item.img_logo_url || item.img_icon_url" :src="getImageURL(item.appid, item.img_logo_url || item.img_icon_url)">
@@ -11,6 +8,9 @@
         </h3>
       </b-list-group-item>
     </b-list-group>
+    <h2 v-if="!gamelist">
+      You don't have any games in common... Sorry 😕
+    </h2>
   </div>
 </template>
 
@@ -55,7 +55,7 @@ export default {
 
 .list-group-item {
     display: flex;
-    flex-flow: row nowrap;
+    flex-flow: row wrap;
     justify-content: flex-start;
     align-items: center;
     padding: 0;

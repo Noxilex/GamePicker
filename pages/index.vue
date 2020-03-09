@@ -246,10 +246,11 @@ h1 {
 }
 
 .blur-bg {
-  background-color: rgba(255, 255,255,0.3);
-  filter: blur(5px);
+  background-color: rgba(0, 0,0,0.7);
+  filter: blur(20px);
 }
 .container {
+  color:white;
   position: relative;
   margin: 0 auto;
   display: flex;

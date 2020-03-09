@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1>Enter your name</h1>
+    <h1>Enter your Steam name</h1>
     <b-form class="py-2">
       <b-form-input v-model="username" trim />
       <b-button variant="success" class="mt-5" @click="$emit('usernameInput', username)">
