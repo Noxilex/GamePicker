@@ -1,35 +1,18 @@
 <template>
-  <div id="page" class="container">
+  <div id="page" class="container ">
+    <div class="absolute blur-bg" />
     <div id="header">
-      <h1>Game Lotery</h1>
+      <h1>Game Picker</h1>
     </div>
 
     <div class="content d-flex flex-column py-5">
       <component
         :is="currentComponent"
+        :gamelist="commonGameList"
+        :friendlist="friendlist"
         @usernameInput="onUsernameInput"
         @friendListInput="onFriendListInput"
       />
-      <b-form-group id="form">
-        <b-input-group>
-          <b-form-input v-model="user" />
-
-          <template v-slot:append>
-            <b-button text="Dropdown" variant="primary" @click="queryGamesForUser">
-              <b-icon icon="search" />
-            </b-button>
-          </template>
-        </b-input-group>
-      </b-form-group>
-      <div v-show="listGames" class="content">
-        <b-list-group id="results" flush>
-          <b-list-group-item v-for="(item, index) in filteredListGames" :key="index">
-            <h2>{{ item.name }}</h2>
-            <img :src="item.appIcon">
-            <p>Playtime: {{ formatTimeString(item.playtime) }}</p>
-          </b-list-group-item>
-        </b-list-group>
-      </div>
     </div>
   </div>
 </template>
@@ -39,14 +22,9 @@ import axios from 'axios'
 import FriendList from './FriendList'
 import Start from './Start'
 import CommonGameList from './CommonGameList'
+// import FriendGameList from '@/assets/FriendGameList'
 
-// class FriendGameList {
-//   constructor (name = '', gamelist = []) {
-//     this.name = name
-//     this.gamelist = gamelist
-//   }
-// }
-
+// console.log(new FriendGameList())
 export default {
   components: {
     FriendList,
@@ -58,6 +36,8 @@ export default {
       user: 'Dosixid',
       currentComponent: Start,
       steamID: '',
+      friendlist: [],
+      commonGameList: [],
       listGames: [{ name: 'Game1', playtime: 100 }, { name: 'Game2', playtime: 200 }, { name: 'Game3', playtime: 300 }]
     }
   },
@@ -74,19 +54,91 @@ export default {
   },
   methods: {
     onUsernameInput (username) {
-      this.toast('Test', 'primary', username)
-      this.currentComponent = FriendList
+      // Get user ID associated
+      this.getUserID(username)
+        .then((userid) => {
+          return this.getFriendList(userid)
+        })
+        .then((friendlist) => {
+          this.friendlist = friendlist.map((friend) => { return { name: friend.personaname, icon: friend.avatar, steamid: friend.steamid } })
+          this.currentComponent = FriendList
+        }).catch((error) => {
+          this.toast('Error', 'danger', error.message)
+        })
     },
-    onFriendListInput (friendlist) {
-      // TODO
-      // Get list of games for each friend
-      // Get common games
+    getFriendsGameList () {
 
-      // Show random button
     },
-    getFriendList () {
-      // TODO
-      return null
+    getPromiseArray (friendlist) {
+      const promises = []
+      friendlist.forEach(friend => promises.push(this.getUserGames(friend)))
+      return promises
+    },
+    async onFriendListInput (friendlist) {
+      try {
+        // Get list of games for each friend
+        let friendGameList = []
+        friendGameList = await Promise.all(this.getPromiseArray(friendlist))
+
+        // Remove undefined list from the results
+        friendGameList = friendGameList.filter((gameList) => {
+          const test = gameList !== undefined
+          if (test) {
+            console.log('Removed a game list because it was undefined')
+          }
+          return test
+        })
+
+        // Get common games
+        console.log('Get common games')
+        let gamesToKeep = friendGameList[0]
+        if (Array.isArray(friendGameList) && friendGameList.length > 1) {
+          friendGameList.forEach((gameList) => {
+            const idsToKeep = gamesToKeep.map(game => game.appid)
+            const tmpGamesToKeep = []
+            gameList.forEach((game) => {
+              if (idsToKeep.includes(game.appid)) {
+                tmpGamesToKeep.push(game)
+              }
+            })
+            gamesToKeep = tmpGamesToKeep
+          })
+        }
+
+        console.log('Games to keep:', gamesToKeep)
+        // Show random button
+        this.commonGameList = gamesToKeep
+        this.currentComponent = CommonGameList
+      } catch (error) {
+        console.log(error)
+        this.toast('Error', 'danger', error.message)
+        this.currentComponent = Start
+      }
+    },
+    async getFriendList (steamID) {
+      const request = {
+        url: 'http://api.steampowered.com/ISteamUser/GetFriendList/v0001/',
+        method: 'get',
+        responseType: 'json',
+        params: {
+          key: '9A1017328003E922265CEB50D57A86FF',
+          steamid: steamID,
+          relationship: 'friend'
+        }
+      }
+      const friends = await axios(request).then(response => response.data.friendslist.friends)
+      const requestNames = {
+        url: 'http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/',
+        method: 'get',
+        responseType: 'json',
+        params: {
+          key: '9A1017328003E922265CEB50D57A86FF',
+          steamids: friends.map(friend => friend.steamid).join(',')
+        }
+      }
+
+      const friendsWithNames = await axios(requestNames).then(response => response.data.response.players)
+      return friendsWithNames
     },
     getGameInfo (gameid) {
       const request = {
@@ -107,38 +159,23 @@ export default {
             const body = response.data.game
             return body
           }
+        }).catch((error) => {
+          throw new Error(error)
         })
     },
-    formatTimeString (minutes) {
-      const hours = Math.floor(minutes / 60) // hours
-      const min = minutes % 60 // minutes
-
-      const formatedHours = hours > 0 ? (min > 0 ? `${hours}h${min}min` : `${hours}h`) : `${min}min`
-
-      return formatedHours
-    },
-    queryGamesForUser () {
+    queryGamesForUser (userid) {
       this.listGames = []
 
-      this.getUserID(this.user).then((userID) => {
-        this.toast('Info', 'info', 'Steam ID: ' + userID)
-        this.getUserGames(userID).then((games) => {
-          const tmpList = []
-          games.forEach((game) => {
-            this.getGameInfo(game.appid).then((gameinfos) => {
-              const imgIcon = game.img_logo_url || game.img_icon_url
-              tmpList.push({ name: gameinfos.gameName, playtime: game.playtime_forever, appIcon: imgIcon })
-            })
-          })
-          console.log(tmpList)
-          this.listGames = tmpList
-        }).catch((error) => {
-          this.toast('Error', 'danger', error)
-          console.error(error)
+      this.getUserGames(userid).then((games) => {
+        const tmpList = []
+        games.forEach((game) => {
+          const imgIcon = game.img_logo_url || game.img_icon_url
+          tmpList.push({ name: game.name, playtime: game.playtime_forever, appIcon: imgIcon })
         })
+        this.listGames = tmpList
       }).catch((error) => {
-        this.toast('Error', 'danger', error)
-        console.log(error)
+        this.toast('Error', 'danger', error.message)
+        console.error(error)
       })
     },
     getUserID (name) {
@@ -162,7 +199,7 @@ export default {
           }
         })
     },
-    getUserGames (userID) {
+    async getUserGames (userID) {
       const request = {
         url: 'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/',
         method: 'get',
@@ -170,20 +207,13 @@ export default {
         params: {
           key: '9A1017328003E922265CEB50D57A86FF',
           steamid: userID,
-          format: 'json'
+          format: 'json',
+          include_appinfo: true,
+          include_played_free_games: true
         }
       }
-
-      return axios.request(request)
-        .then((response) => {
-          if (response.error) {
-            throw new Error(response.error)
-          } else {
-            const body = response.data.response
-            console.log(body)
-            return body.games
-          }
-        })
+      const response = await axios(request)
+      return response.data.response.games
     },
     toast (type, variant, message) {
       this.$bvToast.toast(message, {
@@ -198,6 +228,7 @@ export default {
 
 <style>
 body {
+  background-image: url('../static/background.jpg');
 
   background-color: #35495e;
   color: black;
@@ -205,6 +236,7 @@ body {
 .content {
   overflow: auto;
   flex: 1 1 auto;
+  justify-content: center;
 }
 #form {
   position: relative;
@@ -212,7 +244,13 @@ body {
 h1 {
   color: white;
 }
+
+.blur-bg {
+  background-color: rgba(255, 255,255,0.3);
+  filter: blur(5px);
+}
 .container {
+  position: relative;
   margin: 0 auto;
   display: flex;
   height: 100vh;
@@ -256,5 +294,13 @@ h1 {
 
 .links {
   padding-top: 15px;
+}
+
+.absolute {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  z-index: -1;
+
 }
 </style>
