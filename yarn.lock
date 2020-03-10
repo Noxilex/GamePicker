@@ -3217,7 +3217,7 @@ debug@=3.1.0:
   dependencies:
     ms "2.0.0"
 
-debug@^3.0.0:
+debug@^3.0.0, debug@^3.1.0:
   version "3.2.6"
   resolved "https://registry.yarnpkg.com/debug/-/debug-3.2.6.tgz#e83d17de16d8a7efb7717edbe5fb10135eee629b"
   integrity sha512-mel+jf7nrtEl5Pn1Qx46zARXKDpBbvzezse7p7LqINmdoIk8PYP5SySaxEmYv6TZ0JyEKA1hsCId6DIhgITtWQ==
@@ -6518,6 +6518,13 @@ num2fraction@^1.2.2:
   version "1.2.2"
   resolved "https://registry.yarnpkg.com/num2fraction/-/num2fraction-1.2.2.tgz#6f682b6a027a4e9ddfa4564cd2589d1d4e669ede"
   integrity sha1-b2gragJ6Tp3fpFZM0lidHU5mnt4=
+
+nuxt-cname-module@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/nuxt-cname-module/-/nuxt-cname-module-1.1.1.tgz#05715c373670d944be4d7aa73f3dfbc31e7e2814"
+  integrity sha512-zjcU+CHAqg6tEzTgPpcCOfP1JSmYHrff54Boy/Fly3zI4IQa0ZcAL8MjbzmRPYvYmaC6PB7KkOWhkxe8KU0ZxA==
+  dependencies:
+    debug "^3.1.0"
 
 nuxt-fontawesome@^0.4.0:
   version "0.4.0"
