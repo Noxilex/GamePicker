@@ -33,9 +33,8 @@ export default {
   },
   data () {
     return {
-      user: 'Dosixid',
+      user: null,
       currentComponent: Start,
-      steamID: '',
       friendlist: [],
       commonGameList: [],
       listGames: [{ name: 'Game1', playtime: 100 }, { name: 'Game2', playtime: 200 }, { name: 'Game3', playtime: 300 }]
@@ -55,9 +54,10 @@ export default {
   methods: {
     onUsernameInput (username) {
       // Get user ID associated
-      this.getUserID(username)
-        .then((userid) => {
-          return this.getFriendList(userid)
+      this.getUserData(username)
+        .then((user) => {
+          this.user = user
+          return this.getFriendList(user.id)
         })
         .then((friendlist) => {
           this.friendlist = friendlist.map((friend) => { return { name: friend.personaname, icon: friend.avatar, steamid: friend.steamid } })
@@ -66,9 +66,6 @@ export default {
           this.toast('Error', 'danger', error.message)
         })
     },
-    getFriendsGameList () {
-
-    },
     getPromiseArray (friendlist) {
       const promises = []
       friendlist.forEach(friend => promises.push(this.getUserGames(friend)))
@@ -76,6 +73,9 @@ export default {
     },
     async onFriendListInput (friendlist) {
       try {
+        // Add current user to friendlist
+        friendlist.push(this.user)
+
         // Get list of games for each friend
         let friendGameList = []
         friendGameList = await Promise.all(this.getPromiseArray(friendlist))
@@ -121,7 +121,7 @@ export default {
         method: 'get',
         responseType: 'json',
         params: {
-          key: '9A1017328003E922265CEB50D57A86FF',
+          key: process.env.API_KEY,
           steamid: steamID,
           relationship: 'friend'
         }
@@ -132,7 +132,7 @@ export default {
         method: 'get',
         responseType: 'json',
         params: {
-          key: '9A1017328003E922265CEB50D57A86FF',
+          key: process.env.API_KEY,
           steamids: friends.map(friend => friend.steamid).join(',')
         }
       }
@@ -146,7 +146,7 @@ export default {
         method: 'get',
         responseType: 'json',
         params: {
-          key: '9A1017328003E922265CEB50D57A86FF',
+          key: process.env.API_KEY,
           appid: gameid
         }
       }
@@ -178,13 +178,13 @@ export default {
         console.error(error)
       })
     },
-    getUserID (name) {
+    getUserData (name) {
       const request = {
         url: 'http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/',
         method: 'get',
         responseType: 'json',
         params: {
-          key: '9A1017328003E922265CEB50D57A86FF',
+          key: process.env.API_KEY,
           vanityurl: name
         }
       }
@@ -195,7 +195,7 @@ export default {
             throw new Error(response.error)
           } else {
             const body = response.data.response
-            return body.steamid
+            return body
           }
         })
     },
@@ -205,7 +205,7 @@ export default {
         method: 'get',
         responseType: 'json',
         params: {
-          key: '9A1017328003E922265CEB50D57A86FF',
+          key: process.env.API_KEY,
           steamid: userID,
           format: 'json',
           include_appinfo: true,
@@ -228,7 +228,7 @@ export default {
 
 <style>
 body {
-  background-image: url('../static/background.jpg');
+  background-image: url('../assets/background.jpg');
 
   background-color: #35495e;
   color: black;
