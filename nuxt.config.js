@@ -47,7 +47,8 @@ export default {
     '@nuxtjs/axios',
     // Doc: https://github.com/nuxt-community/dotenv-module
     '@nuxtjs/dotenv',
-    'nuxt-fontawesome'
+    'nuxt-fontawesome',
+    ['nuxt-cname-module', { baseUrl: 'benjamindhoop.me' }]
   ],
   /*
   ** Axios module configuration
@@ -68,7 +69,7 @@ export default {
     /*
     ** You can extend webpack config here
     */
-    extend(config, ctx) {
+    extend (config, ctx) {
     }
   }
 }
