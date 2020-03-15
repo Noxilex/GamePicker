@@ -56,9 +56,6 @@ export default {
   */
   axios: {
   },
-  /**
-   * Conditional router for gh-pages
-   */
   router: {
     base: process.env.DEPLOY_ENV === 'GH_PAGES' ? '/GamePicker/' : '/'
   },
