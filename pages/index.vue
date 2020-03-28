@@ -11,6 +11,7 @@
         :gamelist="commonGameList"
         :friendlist="friendlist"
         @usernameInput="onUsernameInput"
+        @useridInput="onUserIDInput"
         @friendListInput="onFriendListInput"
       />
     </div>
@@ -52,20 +53,28 @@ export default {
     this.$axios.setBaseURL('http://noxilex.ovh:3001')
   },
   methods: {
+    onUserIDInput (steamid) {
+      if (!this.user) {
+        this.user = {}
+      }
+      this.user.steamid = steamid
+      this.getFriendList(steamid).then((friendlist) => {
+        this.friendlist = friendlist.map((friend) => { return { name: friend.personaname, icon: friend.avatar, steamid: friend.steamid } })
+        this.currentComponent = FriendList
+      }).catch((error) => {
+        this.toast('Error', 'danger', error.message)
+      })
+    },
     onUsernameInput (username) {
       // Get user ID associated
       this.getUserData(username)
         .then((user) => {
           this.user = user
           if (user.steamid) {
-            return this.getFriendList(user.steamid)
+            this.onUserIDInput(user.steamid)
           } else {
             throw new Error('No steamid found in user')
           }
-        })
-        .then((friendlist) => {
-          this.friendlist = friendlist.map((friend) => { return { name: friend.personaname, icon: friend.avatar, steamid: friend.steamid } })
-          this.currentComponent = FriendList
         }).catch((error) => {
           this.toast('Error', 'danger', error.message)
         })
