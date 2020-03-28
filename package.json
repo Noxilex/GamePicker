@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "My magnificent Nuxt.js project",
   "author": "Noxilex",
-  "private": true,
   "scripts": {
     "dev": "nuxt",
     "build": "nuxt build",

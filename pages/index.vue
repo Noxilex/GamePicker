@@ -71,13 +71,14 @@ export default {
         })
     },
     getPromiseArray (steamIDList) {
-      console.log(steamIDList)
+      // console.log(steamIDList)
       const promises = []
       steamIDList.forEach((steamID) => {
         if (steamID) {
           promises.push(this.getUserGames(steamID))
         } else {
-          console.error('Error while trying to get games from steamID: ', steamID)
+          this.toast('Error', 'danger', 'Error while trying to get games from steamID: ' + steamID)
+          //  console.error('Error while trying to get games from steamID: ', steamID)
         }
       })
       return promises
@@ -95,13 +96,13 @@ export default {
         friendGameList = friendGameList.filter((gameList) => {
           const test = gameList !== undefined
           if (test) {
-            console.log('Removed a game list because it was undefined')
+            // console.log('Removed a game list because it was undefined')
           }
           return test
         })
 
         // Get common games
-        console.log('Get common games')
+        // console.log('Get common games')
         let gamesToKeep = friendGameList[0]
         if (Array.isArray(friendGameList) && friendGameList.length > 1) {
           friendGameList.forEach((gameList) => {
@@ -116,12 +117,12 @@ export default {
           })
         }
 
-        console.log('Games to keep:', gamesToKeep)
+        // console.log('Games to keep:', gamesToKeep)
         // Show random button
         this.commonGameList = gamesToKeep
         this.currentComponent = CommonGameList
       } catch (error) {
-        console.error(error)
+        // console.error(error)
         this.toast('Error', 'danger', error.message)
         this.currentComponent = Start
       }
@@ -183,7 +184,7 @@ export default {
         this.listGames = tmpList
       }).catch((error) => {
         this.toast('Error', 'danger', error.message)
-        console.error(error)
+        // console.error(error)
       })
     },
     getUserData (name) {
@@ -218,7 +219,7 @@ export default {
           include_played_free_games: true
         }
       }
-      console.log(request, userID)
+      // console.log(request, userID)
       const response = await this.$axios(request)
       return response.data.games
     },
