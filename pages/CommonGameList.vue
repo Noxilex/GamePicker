@@ -49,13 +49,14 @@ export default {
 
 <style scoped>
 #result {
+  max-height: 800px;
     min-height: 200px;
     width: 100%;
 }
 
 .list-group-item {
     display: flex;
-    flex-flow: row wrap;
+    flex-flow: row nowrap;
     justify-content: flex-start;
     align-items: center;
     padding: 0;

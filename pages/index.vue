@@ -5,7 +5,7 @@
       <h1>Game Picker</h1>
     </div>
 
-    <div class="content d-flex flex-column py-5">
+    <div class="content d-flex flex-column my-5">
       <component
         :is="currentComponent"
         :gamelist="commonGameList"
@@ -18,7 +18,6 @@
 </template>
 
 <script>
-import axios from 'axios'
 import FriendList from './FriendList'
 import Start from './Start'
 import CommonGameList from './CommonGameList'
@@ -50,6 +49,7 @@ export default {
     }
   },
   mounted () {
+    this.$axios.setBaseURL('http://noxilex.ovh:3001')
   },
   methods: {
     onUsernameInput (username) {
@@ -57,7 +57,11 @@ export default {
       this.getUserData(username)
         .then((user) => {
           this.user = user
-          return this.getFriendList(user.id)
+          if (user.steamid) {
+            return this.getFriendList(user.steamid)
+          } else {
+            throw new Error('No steamid found in user')
+          }
         })
         .then((friendlist) => {
           this.friendlist = friendlist.map((friend) => { return { name: friend.personaname, icon: friend.avatar, steamid: friend.steamid } })
@@ -66,15 +70,22 @@ export default {
           this.toast('Error', 'danger', error.message)
         })
     },
-    getPromiseArray (friendlist) {
+    getPromiseArray (steamIDList) {
+      console.log(steamIDList)
       const promises = []
-      friendlist.forEach(friend => promises.push(this.getUserGames(friend)))
+      steamIDList.forEach((steamID) => {
+        if (steamID) {
+          promises.push(this.getUserGames(steamID))
+        } else {
+          console.error('Error while trying to get games from steamID: ', steamID)
+        }
+      })
       return promises
     },
     async onFriendListInput (friendlist) {
       try {
         // Add current user to friendlist
-        friendlist.push(this.user)
+        friendlist.push(this.user.steamid)
 
         // Get list of games for each friend
         let friendGameList = []
@@ -110,48 +121,45 @@ export default {
         this.commonGameList = gamesToKeep
         this.currentComponent = CommonGameList
       } catch (error) {
-        console.log(error)
+        console.error(error)
         this.toast('Error', 'danger', error.message)
         this.currentComponent = Start
       }
     },
     async getFriendList (steamID) {
       const request = {
-        url: 'http://api.steampowered.com/ISteamUser/GetFriendList/v0001/',
+        url: '/getFriendList',
         method: 'get',
         responseType: 'json',
         params: {
-          key: process.env.API_KEY,
           steamid: steamID,
           relationship: 'friend'
         }
       }
-      const friends = await axios(request).then(response => response.data.friendslist.friends)
+      const friends = await this.$axios(request).then(response => response.data.friendslist.friends)
       const requestNames = {
-        url: 'http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/',
+        url: '/getPlayerNames',
         method: 'get',
         responseType: 'json',
         params: {
-          key: process.env.API_KEY,
           steamids: friends.map(friend => friend.steamid).join(',')
         }
       }
 
-      const friendsWithNames = await axios(requestNames).then(response => response.data.response.players)
+      const friendsWithNames = await this.$axios(requestNames).then(response => response.data.players)
       return friendsWithNames
     },
     getGameInfo (gameid) {
       const request = {
-        url: 'http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/',
+        url: '/getGameInfos',
         method: 'get',
         responseType: 'json',
         params: {
-          key: process.env.API_KEY,
           appid: gameid
         }
       }
 
-      return axios(request)
+      return this.$axios(request)
         .then((response) => {
           if (response.error) {
             throw new Error(response.error)
@@ -180,40 +188,39 @@ export default {
     },
     getUserData (name) {
       const request = {
-        url: 'http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/',
+        url: '/getUserID',
         method: 'get',
         responseType: 'json',
         params: {
-          key: process.env.API_KEY,
           vanityurl: name
         }
       }
 
-      return axios(request)
+      return this.$axios(request)
         .then((response) => {
           if (response.error) {
             throw new Error(response.error)
           } else {
-            const body = response.data.response
+            const body = response.data
             return body
           }
         })
     },
     async getUserGames (userID) {
       const request = {
-        url: 'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/',
+        url: '/getUserApps',
         method: 'get',
         responseType: 'json',
         params: {
-          key: process.env.API_KEY,
           steamid: userID,
           format: 'json',
           include_appinfo: true,
           include_played_free_games: true
         }
       }
-      const response = await axios(request)
-      return response.data.response.games
+      console.log(request, userID)
+      const response = await this.$axios(request)
+      return response.data.games
     },
     toast (type, variant, message) {
       this.$bvToast.toast(message, {
@@ -236,7 +243,6 @@ body {
 .content {
   overflow: auto;
   flex: 1 1 auto;
-  justify-content: center;
 }
 #form {
   position: relative;
