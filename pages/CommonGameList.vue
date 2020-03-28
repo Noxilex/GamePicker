@@ -65,9 +65,11 @@ export default {
 }
 .list-group-item > img {
     flex:initial;
+  min-width: 184px;
 }
 
-.list-group-item > h2 {
+.list-group-item > h3 {
     flex:auto;
+    text-align: left;
 }
 </style>

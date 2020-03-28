@@ -37,7 +37,8 @@ export default {
       currentComponent: Start,
       friendlist: [],
       commonGameList: [],
-      listGames: [{ name: 'Game1', playtime: 100 }, { name: 'Game2', playtime: 200 }, { name: 'Game3', playtime: 300 }]
+      friendGameList: [],
+      unauthorizedSteamIDs: []
     }
   },
   computed: {
@@ -47,6 +48,14 @@ export default {
       }).sort((game1, game2) => {
         return game2.playtime - game1.playtime
       })
+    },
+    unauthorizedUsers () {
+      return this.totalFriendList.filter((friend) => {
+        return this.unauthorizedSteamIDs.includes(friend.steamid)
+      })
+    },
+    totalFriendList () {
+      return [...this.friendlist, this.user]
     }
   },
   mounted () {
@@ -58,11 +67,20 @@ export default {
         this.user = {}
       }
       this.user.steamid = steamid
+      this.getPlayersInfo(steamid).then((user) => {
+        this.user = {
+          name: user[0].personaname,
+          icon: user[0].avatar,
+          steamid: user[0].steamid
+        }
+      }).catch((error) => {
+        this.toast('Error', 'danger', error.message)
+      })
       this.getFriendList(steamid).then((friendlist) => {
         this.friendlist = friendlist.map((friend) => { return { name: friend.personaname, icon: friend.avatar, steamid: friend.steamid } })
         this.currentComponent = FriendList
       }).catch((error) => {
-        this.toast('Error', 'danger', error.message)
+        this.toast('Error', 'danger', error.response.data.message)
       })
     },
     onUsernameInput (username) {
@@ -84,7 +102,10 @@ export default {
       const promises = []
       steamIDList.forEach((steamID) => {
         if (steamID) {
-          promises.push(this.getUserGames(steamID))
+          promises.push(this.getUserGames(steamID).catch((error) => {
+            this.unauthorizedSteamIDs.push(steamID)
+            return error
+          }))
         } else {
           this.toast('Error', 'danger', 'Error while trying to get games from steamID: ' + steamID)
           //  console.error('Error while trying to get games from steamID: ', steamID)
@@ -92,49 +113,63 @@ export default {
       })
       return promises
     },
-    async onFriendListInput (friendlist) {
-      try {
-        // Add current user to friendlist
-        friendlist.push(this.user.steamid)
+    onFriendListInput (friendlist) {
+      // Add current user to friendlist
+      friendlist.push(this.user.steamid)
 
-        // Get list of games for each friend
-        let friendGameList = []
-        friendGameList = await Promise.all(this.getPromiseArray(friendlist))
+      // Get list of games for each person
+      this.friendGameList = []
 
+      this.unauthorizedSteamIDs = []
+
+      Promise.all(this.getPromiseArray(friendlist)).then((friendGameList) => {
+        // Handle errors in the results (necessary so that we process all errors)
+        const errors = friendGameList.filter((item) => {
+          return item instanceof Error
+        })
+        if (errors.length > 0) {
+          throw errors
+        }
+        this.friendGameList = friendGameList
         // Remove undefined list from the results
-        friendGameList = friendGameList.filter((gameList) => {
+        this.friendGameList = this.friendGameList.filter((gameList) => {
           const test = gameList !== undefined
-          if (test) {
+          if (!test) {
             // console.log('Removed a game list because it was undefined')
           }
           return test
         })
 
         // Get common games
+        const gamesToKeep = this.getCommonGames(this.friendGameList)
         // console.log('Get common games')
-        let gamesToKeep = friendGameList[0]
-        if (Array.isArray(friendGameList) && friendGameList.length > 1) {
-          friendGameList.forEach((gameList) => {
-            const idsToKeep = gamesToKeep.map(game => game.appid)
-            const tmpGamesToKeep = []
-            gameList.forEach((game) => {
-              if (idsToKeep.includes(game.appid)) {
-                tmpGamesToKeep.push(game)
-              }
-            })
-            gamesToKeep = tmpGamesToKeep
-          })
-        }
 
         // console.log('Games to keep:', gamesToKeep)
         // Show random button
         this.commonGameList = gamesToKeep
         this.currentComponent = CommonGameList
-      } catch (error) {
-        // console.error(error)
-        this.toast('Error', 'danger', error.message)
-        this.currentComponent = Start
+      }).catch((errors) => {
+        // console.log(this.unauthorizedSteamIDs)
+        this.toast('Error', 'danger', 'Missing permission to get list of games for users: ' + this.unauthorizedUsers.map(user => user.name).join(', '))
+        this.currentComponent = FriendList
+      })
+    },
+
+    getCommonGames (friendList) {
+      let gamesToKeep = friendList[0]
+      if (Array.isArray(friendList) && friendList.length > 1) {
+        friendList.forEach((gameList) => {
+          const idsToKeep = gamesToKeep.map(game => game.appid)
+          const tmpGamesToKeep = []
+          gameList.forEach((game) => {
+            if (idsToKeep.includes(game.appid)) {
+              tmpGamesToKeep.push(game)
+            }
+          })
+          gamesToKeep = tmpGamesToKeep
+        })
       }
+      return gamesToKeep
     },
     async getFriendList (steamID) {
       const request = {
@@ -147,17 +182,19 @@ export default {
         }
       }
       const friends = await this.$axios(request).then(response => response.data.friendslist.friends)
+      return this.getPlayersInfo(friends.map(friend => friend.steamid).join(','))
+    },
+    getPlayersInfo (steamids) {
       const requestNames = {
         url: '/getPlayerNames',
         method: 'get',
         responseType: 'json',
         params: {
-          steamids: friends.map(friend => friend.steamid).join(',')
+          steamids
         }
       }
 
-      const friendsWithNames = await this.$axios(requestNames).then(response => response.data.players)
-      return friendsWithNames
+      return this.$axios(requestNames).then(response => response.data.players)
     },
     getGameInfo (gameid) {
       const request = {
@@ -180,21 +217,6 @@ export default {
         }).catch((error) => {
           throw new Error(error)
         })
-    },
-    queryGamesForUser (userid) {
-      this.listGames = []
-
-      this.getUserGames(userid).then((games) => {
-        const tmpList = []
-        games.forEach((game) => {
-          const imgIcon = game.img_logo_url || game.img_icon_url
-          tmpList.push({ name: game.name, playtime: game.playtime_forever, appIcon: imgIcon })
-        })
-        this.listGames = tmpList
-      }).catch((error) => {
-        this.toast('Error', 'danger', error.message)
-        // console.error(error)
-      })
     },
     getUserData (name) {
       const request = {

@@ -32,7 +32,7 @@ export default {
     filteredFriendList () {
       const re = new RegExp(this.toLowerCase(this.filterName), 'g')
       if (this.friendlist) {
-        return this.friendlist.filter(friend => this.toLowerCase(friend.name).match(re))
+        return this.friendlist.filter(friend => this.toLowerCase(friend.name).match(re)).sort((prev, next) => { return prev.name.toLowerCase() < next.name.toLowerCase() ? -1 : 1 })
       } else {
         return []
       }
