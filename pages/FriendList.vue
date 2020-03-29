@@ -16,6 +16,9 @@
     <b-button @click="$emit('friendListInput', selectedFriends)">
       Confirm
     </b-button>
+    <b-button variant="danger" @click="selectedFriends = []">
+      Reset
+    </b-button>
   </div>
 </template>
 

@@ -4,37 +4,50 @@
     <div id="header">
       <h1>Game Picker</h1>
     </div>
-
+    <b-breadcrumb>
+      <b-breadcrumb-item :active="selectedTabComponent == 'start'" @click="selectedTabComponent = 'start'">
+        <b-icon icon="house-fill" scale="1.25" shift-v="1.25" aria-hidden="true" />
+        Start
+      </b-breadcrumb-item>
+      <b-breadcrumb-item v-if="selectedTabComponent == 'friends' || selectedTabComponent == 'gameList'" :active="selectedTabComponent == 'friends'" @click="selectedTabComponent = 'friends'">
+        Friend List
+      </b-breadcrumb-item>
+      <b-breadcrumb-item v-if="selectedTabComponent == 'gameList'" :active="selectedTabComponent == 'gameList'" @click="selectedTabComponent = 'gameList'">
+        Game List
+      </b-breadcrumb-item>
+    </b-breadcrumb>
     <div class="content d-flex flex-column my-5">
-      <component
-        :is="currentComponent"
-        :gamelist="commonGameList"
-        :friendlist="friendlist"
-        @usernameInput="onUsernameInput"
-        @useridInput="onUserIDInput"
-        @friendListInput="onFriendListInput"
-      />
+      <keep-alive>
+        <component
+          :is="currentComponent"
+          :gamelist="commonGameList"
+          :friendlist="friendlist"
+          @usernameInput="onUsernameInput"
+          @useridInput="onUserIDInput"
+          @friendListInput="onFriendListInput"
+        />
+      </keep-alive>
     </div>
   </div>
 </template>
 
 <script>
-import FriendList from './FriendList'
 import Start from './Start'
+import FriendList from './FriendList'
 import CommonGameList from './CommonGameList'
 // import FriendGameList from '@/assets/FriendGameList'
 
 // console.log(new FriendGameList())
 export default {
   components: {
-    FriendList,
     Start,
+    FriendList,
     CommonGameList
   },
   data () {
     return {
       user: null,
-      currentComponent: Start,
+      selectedTabComponent: 'start',
       friendlist: [],
       commonGameList: [],
       friendGameList: [],
@@ -56,6 +69,18 @@ export default {
     },
     totalFriendList () {
       return [...this.friendlist, this.user]
+    },
+    currentComponent () {
+      switch (this.selectedTabComponent) {
+        case 'start':
+          return Start
+        case 'friends':
+          return FriendList
+        case 'gameList':
+          return CommonGameList
+        default:
+          return Start
+      }
     }
   },
   mounted () {
@@ -78,7 +103,7 @@ export default {
       })
       this.getFriendList(steamid).then((friendlist) => {
         this.friendlist = friendlist.map((friend) => { return { name: friend.personaname, icon: friend.avatar, steamid: friend.steamid } })
-        this.currentComponent = FriendList
+        this.selectedTabComponent = 'friends'
       }).catch((error) => {
         this.toast('Error', 'danger', error.response.data.message)
       })
@@ -115,14 +140,14 @@ export default {
     },
     onFriendListInput (friendlist) {
       // Add current user to friendlist
-      friendlist.push(this.user.steamid)
+      const fullFriendList = [...friendlist, this.user.steamid]
 
       // Get list of games for each person
       this.friendGameList = []
 
       this.unauthorizedSteamIDs = []
 
-      Promise.all(this.getPromiseArray(friendlist)).then((friendGameList) => {
+      Promise.all(this.getPromiseArray(fullFriendList)).then((friendGameList) => {
         // Handle errors in the results (necessary so that we process all errors)
         const errors = friendGameList.filter((item) => {
           return item instanceof Error
@@ -147,11 +172,11 @@ export default {
         // console.log('Games to keep:', gamesToKeep)
         // Show random button
         this.commonGameList = gamesToKeep
-        this.currentComponent = CommonGameList
+        this.selectedTabComponent = 'gameList'
       }).catch((errors) => {
         // console.log(this.unauthorizedSteamIDs)
         this.toast('Error', 'danger', 'Missing permission to get list of games for users: ' + this.unauthorizedUsers.map(user => user.name).join(', '))
-        this.currentComponent = FriendList
+        this.selectedTabComponent = 'friends'
       })
     },
 

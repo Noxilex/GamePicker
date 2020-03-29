@@ -8,7 +8,7 @@
         </h3>
       </b-list-group-item>
     </b-list-group>
-    <h2 v-if="!gamelist">
+    <h2 v-if="gamelist.length <= 0">
       You don't have any games in common... Sorry 😕
     </h2>
   </div>
