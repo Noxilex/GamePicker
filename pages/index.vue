@@ -84,7 +84,7 @@ export default {
     }
   },
   mounted () {
-    this.$axios.setBaseURL('http://localhost:3001')
+    this.$axios.setBaseURL('http://noxilex.ovh:3001')
   },
   methods: {
     onUserIDInput (steamid) {
